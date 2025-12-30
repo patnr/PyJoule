@@ -32,6 +32,9 @@ class Uplink:
             ]
         )
 
+    def __repr__(self):
+        return f"Uplink(host='{self.host}', progbar={self.progbar}, dry={self.dry}, use_M={self.use_M})"
+
     def cmd(self, cmd: str, login_shell=True, **kwargs):
         if isinstance(cmd, list):
             cmd = " ".join([str(x) for x in cmd])
