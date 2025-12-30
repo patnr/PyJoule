@@ -1,4 +1,5 @@
 """Tools to aid showing results."""
+
 import json
 import subprocess
 import sys
@@ -13,12 +14,8 @@ colr.init()  # for Windows
 warn = "Warning:"
 
 
-
 # Running in iPython?
-if "IPython" in sys.modules:
-    ip = __import__("IPython").get_ipython()
-else:
-    ip = None
+ip = __import__("IPython").get_ipython() if "IPython" in sys.modules else None
 
 
 def confirm_cold_call(script: str, seconds: int = 300):
@@ -48,7 +45,7 @@ def confirm_cold_call(script: str, seconds: int = 300):
 
             # read
             if timestamp_file.exists():
-                with open(timestamp_file, "r") as f:
+                with open(timestamp_file) as f:
                     timestamps = json.load(f)
             else:
                 timestamps = {}

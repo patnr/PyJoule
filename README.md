@@ -66,7 +66,67 @@ hand crafted solutions are error prone, and often an after-thought.
 - `threadpoolctl.threadpool_limits(1)`
 - Batching for `SLURM`
 
-## TODO
+## Development
 
-- Processing of results
-- Generalize to other dependency management than `uv`.
+### Testing
+
+**Run all tests (excluding slow tests):**
+```bash
+pytest
+```
+
+**Run all tests including slow tests:**
+```bash
+pytest -m "slow or not slow"
+# or simply
+pytest -m ""
+```
+
+**Run only slow tests (remote host integration tests):**
+```bash
+pytest -m slow
+```
+
+**Run specific host dispatch test:**
+```bash
+# By parameter name (uses -k for pattern matching)
+pytest -m slow -k "subprocess" -v
+pytest -m slow -k "localhost" -v
+pytest -m slow -k "hpc-cluster" -v
+
+# By full test path
+pytest tests/test_example.py::TestIntegration::test_host_dispatch[subprocess] -v -m ""
+```
+
+**View all available tests:**
+```bash
+pytest --collect-only -m ""
+```
+
+The test suite includes:
+- **Fast tests**: Unit tests for core functionality (run by default)
+- **Slow tests**: Integration tests with SSH/remote execution (marked with `@pytest.mark.slow`, skipped by default)
+  - Each host appears as a separate parameterized test
+  - Results are compared against reference (direct execution)
+  - Unreachable hosts are automatically skipped
+
+### Linting and Formatting
+
+This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and formatting.
+
+```bash
+# Check formatting
+ruff format --check .
+
+# Format code
+ruff format .
+
+# Check linting
+ruff check .
+
+# Fix auto-fixable linting issues
+ruff check --fix .
+
+# Run both (all files)
+ruff check --fix . && ruff format .
+```

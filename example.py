@@ -1,12 +1,13 @@
-from os import lstat
 import numpy as np
 import numpy.random as rnd
 
-from xp import dispatch, dict_prod, load_data
+# from xp import dispatch, dict_prod, load_data
+from xp import dict_prod
 
 
 def experiment(seed=None, method=None, N=None):
     """The main experiment of interest."""
+
     # Integrate f(x) = x^2 over [0, 1]
     def f(x):
         return x**2
@@ -25,7 +26,7 @@ def experiment(seed=None, method=None, N=None):
     true_val = 1 / 3
     error = abs(estimate - true_val)
     # PS: further processing of stats may be done later (when all results are at hand, e.g.)
-    return dict(estimate=estimate, true_val=true_val, error=error)
+    return {"estimate": estimate, "true_val": true_val, "error": error}
 
 
 def list_experiments():
@@ -45,8 +46,9 @@ def list_experiments():
     )
     # Combine: each `xps` item gets all combinations in `common`
     xps = [{**c, **d} for d in xps for c in common]  # latter `for` is "inner/faster"
-    xps = [dict(t) for t in {tuple(d.items()): None for d in xps}] # remove dupes (preserve order)
+    xps = [dict(t) for t in {tuple(d.items()): None for d in xps}]  # remove dupes (preserve order)
     return xps
+
 
 if __name__ == "__main__":
     xps = list_experiments()
@@ -62,6 +64,7 @@ if __name__ == "__main__":
 
     # Print table of results
     import pandas as pd
+
     df = pd.DataFrame(xps).set_index(list(xps[0]))
     df = pd.DataFrame.from_records(res, index=df.index)
     print(df)
