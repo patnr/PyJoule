@@ -1,12 +1,12 @@
-import itertools
+"""Tools to aid showing results."""
 import json
 import subprocess
 import sys
 import time
 from functools import wraps
 from pathlib import Path
-import colorama as colr
 
+import colorama as colr
 
 colr.init()  # for Windows
 # warn = colr.Back.YELLOW + "Warning:" + colr.Style.RESET_ALL
@@ -19,7 +19,6 @@ if "IPython" in sys.modules:
     ip = __import__("IPython").get_ipython()
 else:
     ip = None
-
 
 
 def confirm_cold_call(script: str, seconds: int = 300):
@@ -124,8 +123,3 @@ def yank(txt, append=False):
 
     process = subprocess.Popen("pbcopy", env={"LANG": "en_US.UTF-8"}, stdin=subprocess.PIPE)
     process.communicate(txt.encode("utf-8"))
-
-def dict_prod(**kwargs):
-    """Product of `kwargs` values."""
-    # PS: the first keys in `kwargs` are the slowest to increment.
-    return [dict(zip(kwargs, x)) for x in itertools.product(*kwargs.values())]
