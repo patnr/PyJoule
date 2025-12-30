@@ -1,4 +1,4 @@
-"""Run `fun_name` (from `script`) using `nCPU`, but first: load xps. Last: Save results."""
+"""Load `xps` dicts. Run through `fun_name` (from `script`) using `nCPU`. Save results."""
 # NOTE: This file *imports* `script` and invokes the `fun` defined therein.
 # But want to support "standalone" scripts, i.e. run as `python path/to/{script}`.
 # ⇒ This file must get copied into `to/` or insert `to/` in `sys.path`.

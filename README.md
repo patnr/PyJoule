@@ -52,7 +52,8 @@ Although the principle of varying only one parameter at a time is valuable, in p
 4. **Problem parameters (generality):** Each problem may have its own parameters, which can differ between methods.
 5. **Random seed (reliability):** Results should be averaged over multiple random seeds to ensure reliability.
 
-This leads to a great number of experiments to be run and results to be processed.
+This leads to a great number of experiments to be run and results to be processed,
+with the complication that many parameters only apply for some methods/experiments.
 As mentioned [here](https://www.youtube.com/watch?v=EeqhOSvNX-A)
 hand crafted solutions are error prone, and often an after-thought.
 
@@ -68,5 +69,4 @@ hand crafted solutions are error prone, and often an after-thought.
 ## TODO
 
 - Processing of results
-- Finish implementing for NORCE HPC cluster with `SLURM` queue.
 - Generalize to other dependency management than `uv`.
