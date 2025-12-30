@@ -16,22 +16,27 @@ from .local_mp import mp
 
 timestamp = "%Y-%m-%d_at_%H-%M-%S"
 bar_frmt = "{l_bar}|{bar}| {n_fmt}/{total_fmt}, ⏱️ {elapsed} ⏳{remaining}, {rate_fmt}{postfix}"
-responsive = dict(check=True, capture_output=True, text=True)
+responsive = {"check": True, "capture_output": True, "text": True}
 
 
 def dict_prod(**kwargs):
     """Product of `kwargs` values."""
     # PS: the first keys in `kwargs` are the slowest to increment.
-    return [dict(zip(kwargs, x)) for x in itertools.product(*kwargs.values())]
+    return [dict(zip(kwargs, x, strict=True)) for x in itertools.product(*kwargs.values())]
+
 
 def progbar(*args, **kwargs):
     return tqdm(*args, bar_format=bar_frmt, **kwargs)
+
 
 def load_data(pth, pbar=True):
     pbar = progbar if pbar else (lambda x: x)
     data = []
     for r in pbar(sorted(pth.iterdir(), key=lambda p: int(p.name))):
-        data.extend(dill.loads(r.read_bytes()))
+        try:
+            data.extend(dill.loads(r.read_bytes()))
+        except Exception as e:
+            print(f"Warning: Failed to load {r}: {e}")
     return data
 
 
@@ -63,7 +68,7 @@ def git_sha():
 
 def mk_data_dir(
     data_dir,
-    tags=tuple(),  # Whatever you want, e.g. "v1"
+    tags=(),  # Whatever you want, e.g. "v1"
     mkdir=True,  # Make dirs, including xps/ and res/
 ):
     """Add timestamp/tag and mkdir for data storage."""
@@ -122,6 +127,7 @@ def save(xps, data_dir, nBatch):
 # - The above duplicate is quite likely to cause confusion.
 #   ⇒ Symlink instead. Requires `-L` flag to `rsync` (append to `-azh`).
 
+
 def dispatch(
     fun: callable,
     xps: list,
@@ -152,6 +158,12 @@ def dispatch(
     Still, if possible (if subpath to `proj_dir`), the `cwd` is "preserved" on remote,
     such that resources specified relative to it (sloppy!) may be found.
     """
+    # Validate inputs before expensive operations
+    if not callable(fun):
+        raise TypeError(f"fun must be callable, got {type(fun)}")
+    if not xps:
+        raise ValueError("xps list cannot be empty")
+
     # Don't want to pickle `fun`, because it often contains very deep references,
     # and take up a lot of storage (especially if saved with each xp).
     # ⇒ Ensure we know the script from which we can import it.

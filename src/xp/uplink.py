@@ -3,10 +3,10 @@
 Requires rsync and ssh access to the server.
 """
 
-from contextlib import contextmanager
-from pathlib import Path
 import os
 import subprocess
+from contextlib import contextmanager
+from pathlib import Path
 
 
 class Uplink:
@@ -42,7 +42,7 @@ class Uplink:
             # sources ~/.bash_profile or ~/.profile, which may or not include ~/.bashrc
             cmd = f"bash -l -c '{cmd}'"
 
-        kwargs = {**dict(check=True, text=True, capture_output=True), **kwargs}
+        kwargs = {**{"check": True, "text": True, "capture_output": True}, **kwargs}
         try:
             return subprocess.run([*self.ssh_M.split(), self.host, cmd], **kwargs)
         except subprocess.CalledProcessError as error:
@@ -74,16 +74,10 @@ class Uplink:
         has_prog2 = (v[0] >= 3) and (v[1] >= 1)
 
         # Show progress
-        if self.progbar and has_prog2:
-            progbar = ("--info=progress2", "--no-inc-recursive")
-        else:
-            progbar = []
+        progbar = ("--info=progress2", "--no-inc-recursive") if self.progbar and has_prog2 else []
 
         # Use multiplex
-        if self.use_M:
-            multiplex = "-e", self.ssh_M
-        else:
-            multiplex = []
+        multiplex = ("-e", self.ssh_M) if self.use_M else []
 
         # Assemble command
         cmd = ["rsync", "-azhL", *progbar, *multiplex, *opts, src, dst]
@@ -105,7 +99,8 @@ class Uplink:
         # Sync other.name -> target/
         for p in other:
             p = Path(p).expanduser().resolve()
-            assert p != Path.home(), "You probably do not want to sync your entire home dir."
+            if p == Path.home():
+                raise ValueError("You probably do not want to sync your entire home dir.")
             self.rsync(f"{p}/", Path(target_dir) / p.name)
 
         # Reverse sync (i.e. download results) when exiting

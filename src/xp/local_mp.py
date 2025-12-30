@@ -1,7 +1,7 @@
 """Thin wrapper (for convenience) on top of `pathos.multiprocessing`."""
+
 import pathos.multiprocessing as MP
 import threadpoolctl
-
 
 threadpoolctl.threadpool_limits(1)  # make np use only 1 core
 
@@ -9,6 +9,7 @@ threadpoolctl.threadpool_limits(1)  # make np use only 1 core
 def mp(f, lst, nCPU=None):
     """Multiprocessing map with progress bar."""
     from xp import progbar
+
     if nCPU in [None, "all"] or nCPU is True:
         nCPU = MP.cpu_count()
 

@@ -66,6 +66,45 @@ hand crafted solutions are error prone, and often an after-thought.
 - `threadpoolctl.threadpool_limits(1)`
 - Batching for `SLURM`
 
+## Development
+
+### Linting and Formatting
+
+This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and formatting.
+
+**Commands:**
+```bash
+# Check formatting
+ruff format --check .
+
+# Format code
+ruff format .
+
+# Check linting
+ruff check .
+
+# Fix auto-fixable linting issues
+ruff check --fix .
+
+# Run both (all files)
+ruff check --fix . && ruff format .
+```
+
+**Pre-commit Hook:**
+A git pre-commit hook is installed in `.git/hooks/pre-commit` that automatically runs ruff linter and formatter before each commit.
+
+**Testing:**
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_example.py
+
+# Run with coverage
+pytest --cov=xp tests/
+```
+
 ## TODO
 
 - Processing of results
