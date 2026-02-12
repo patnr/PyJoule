@@ -14,7 +14,9 @@ from xp.local_mp import mp
 
 if __name__ == "__main__":
     # Unpack arguments
-    _, script, fun_name, dir_xps, nCPU = sys.argv
+    _, script, fun_name, nCPU, dir_xps = sys.argv
+
+    # Default value
     nCPU = None if nCPU == "None" else int(nCPU)
 
     fun = getattr(import_module(script), fun_name)

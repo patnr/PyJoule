@@ -195,24 +195,22 @@ def dispatch(
     paths_xps = sorted((data_dir / "xps").iterdir(), key=lambda p: int(p.name))
     assert paths_xps, f"No files found in {data_dir}"
 
+    def launch_script(py, cwd=False, string=False):
+        args = [py, script.parent / "launch_xps.py", script.stem, fun.__name__, nCPU]
+        args = [str(x) for x in args]
+        if cwd:
+            # PS: A well-crafted script should be independend of cwd,
+            # but not necessarily {script.parent} (i.e. sys.path[0])
+            args.insert(0, f"cd {cwd} &&")
+        if string:
+            args = " ".join(args)
+        return args
+
     # Run locally
     if host == "SUBPROCESS":
         for xp in paths_xps:
             try:
-                # current_interpreter = "python" # requires active venv
-                current_interpreter = sys.executable
-                subprocess.run(
-                    [
-                        current_interpreter,
-                        script.parent / "launch_xps.py",
-                        script.stem,
-                        fun.__name__,
-                        xp,
-                        str(nCPU),
-                    ],
-                    check=True,
-                    cwd=Path.cwd(),
-                )
+                subprocess.run(launch_script(sys.executable) + [xp], check=True, cwd=Path.cwd())
             except subprocess.CalledProcessError:
                 raise
 
@@ -254,11 +252,13 @@ def dispatch(
                 f"cd {data_dir_remote / proj_dir.stem}; UV_PROJECT_ENVIRONMENT={venv} uv sync",
                 capture_output=False,  # simply print
             )
+            py = f"{venv}/bin/python"
 
             # Run on NORCE HPC cluster with SLURM queueing system
             if "hpc.intra.norceresearch" in host:
                 # Send job submission script
                 with NamedTemporaryFile(mode="w+t", delete_on_close=False) as sbatch:
+                    launch_script = launch_script(py, cwd=cwd, string=True)
                     txt = (Path(__file__).parent / "slurm_script.sbatch").read_text()
                     txt = eval(f"f'''{txt}'''", {}, locals())  # interpolate f-strings inside {txt}
                     sbatch.write(txt)
@@ -266,6 +266,7 @@ def dispatch(
                     remote.rsync(sbatch.name, data_dir_remote / "job_script.sbatch")
 
                 # Submit
+                # TODO: `command` here necessary?
                 job_id = remote.cmd(f"command cd {data_dir_remote}; sbatch job_script.sbatch")
                 print(job_id.stdout, end="")
                 job_id = int(re.search(r"job (\d*)", job_id.stdout).group(1))
@@ -298,17 +299,5 @@ def dispatch(
             else:
                 # Run (`launch_xps.py` uses `mp` ⇒ no point parallelising this loop)
                 for xp in paths_xps:
-                    remote.cmd(
-                        [
-                            # PS: A well-crafted script should be independend of cwd ...
-                            f"cd {cwd};",  # ... so should ideally be able to comment out this line.
-                            f"{venv}/bin/python",
-                            script.parent / "launch_xps.py",
-                            script.stem,
-                            fun.__name__,
-                            xp,
-                            nCPU,
-                        ],
-                        capture_output=False,  # simply print
-                    )
+                    remote.cmd(launch_script(py, cwd=cwd) + [xp], capture_output=False)
     return data_dir
