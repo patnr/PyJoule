@@ -111,6 +111,44 @@ def save(xps, data_dir, nBatch):
     mp(save_batch, range(nBatch))
 
 
+def submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps):
+    # Send job submission script
+    with NamedTemporaryFile(mode="w+t", delete_on_close=False) as sbatch:
+        txt = (Path(__file__).parent / "slurm_script.sbatch").read_text()
+        txt = eval(f"f'''{txt}'''", {}, locals())  # interpolate f-strings inside {txt}
+        sbatch.write(txt)
+        sbatch.close()
+        remote.rsync(sbatch.name, remote_dir / "job_script.sbatch")
+
+    # Submit
+    job_id = remote.cmd(f"command cd {remote_dir}; sbatch job_script.sbatch")
+    print(job_id.stdout, end="")
+    job_id = int(re.search(r"job (\d*)", job_id.stdout).group(1))
+
+    # Monitor job progress
+    nJobs = len(paths_xps)
+    with tqdm(total=nJobs, desc="Jobs") as pbar:
+        unfinished = nJobs
+        while unfinished:
+            time.sleep(1)  # dont clog the ssh uplink
+            new = f"squeue -j {job_id} -h -t pending,running -r | wc -l"
+            new = int(remote.cmd(new).stdout)
+            inc = unfinished - new
+            pbar.update(inc)
+            unfinished = new
+
+    # Provide error summary
+    failed = f"sacct -j {job_id} --format=JobID,State,ExitCode,NodeList | grep -E FAILED"
+    failed = remote.cmd(failed, check=False).stdout.splitlines()
+    if failed:
+        regex = r"_(\d+).*(node-\d+) *$"
+        nodes = {int((m := re.search(regex, ln)).group(1)): m.group(2) for ln in failed}
+        for task in nodes:
+            print(f" Error for job {job_id}_{task} on {nodes[task]} ".center(70, "="))
+            print(remote.cmd(f"cat {remote_dir}/error/{task}").stdout)
+        raise RuntimeError(f"Task(s) {list(nodes)} had errors, see printout above.")
+
+
 # Note on development
 # Would like to develop `dispatch` through an *editable* install,
 # but this does not easily work when transposed to *remote*,
@@ -186,6 +224,13 @@ def dispatch(
     elif host.endswith("*"):
         host = uplink.resolve_host_glob(host)
 
+    # data_root_on_remote
+    if data_root_on_remote is None:
+        if "hpc.intra.norceresearch" in host:
+            data_root_on_remote = "${USERWORK}"
+        else:
+            data_root_on_remote = "${HOME}/data"
+
     # Save xps -- partitioned (for node distribution)
     if nBatch is None:
         nBatch = 40 if host.startswith("login-") else 1
@@ -214,7 +259,7 @@ def dispatch(
             except subprocess.CalledProcessError:
                 raise
 
-    # Run remotely
+    # Run remotely -- largely an exercise in path management
     else:
         remote = uplink.Uplink(host)
 
@@ -227,17 +272,12 @@ def dispatch(
         # Evaluate
         # PS: not strictly necessary since ${some_envar} should work when later invoked
         # by cmd/rsync, but seems more robust and future-proof (for complex commands)
-        if data_root_on_remote is None:
-            if "hpc.intra.norceresearch" in host:
-                data_root_on_remote = "${USERWORK}"
-            else:
-                data_root_on_remote = "${HOME}/data"
         data_root_on_remote = remote.cmd("echo " + data_root_on_remote).stdout.splitlines()[0]
 
         remote_dir = Path(data_root_on_remote) / data_dir.relative_to(data_root)
         paths_xps = [remote_dir / xp.relative_to(data_dir) for xp in paths_xps]
 
-        # Make (try!) cwd such that the relative path of the script is same as locally
+        # cwd -- (try to make!) such that the relative path of the script is same as locally
         try:
             cwd = Path.cwd().relative_to(proj_dir)
         except ValueError:
@@ -257,47 +297,10 @@ def dispatch(
             )
             py = f"{venv}/bin/python"
 
-            # Run on NORCE HPC cluster with SLURM queueing system
             if "hpc.intra.norceresearch" in host:
-                # Send job submission script
-                with NamedTemporaryFile(mode="w+t", delete_on_close=False) as sbatch:
-                    launch_script = launch_script(py, cwd=cwd, string=True)
-                    txt = (Path(__file__).parent / "slurm_script.sbatch").read_text()
-                    txt = eval(f"f'''{txt}'''", {}, locals())  # interpolate f-strings inside {txt}
-                    sbatch.write(txt)
-                    sbatch.close()
-                    remote.rsync(sbatch.name, remote_dir / "job_script.sbatch")
-
-                # Submit
-                # TODO: `command` here necessary?
-                job_id = remote.cmd(f"command cd {remote_dir}; sbatch job_script.sbatch")
-                print(job_id.stdout, end="")
-                job_id = int(re.search(r"job (\d*)", job_id.stdout).group(1))
-
-                # Monitor job progress
-                nJobs = len(paths_xps)
-                with tqdm(total=nJobs, desc="Jobs") as pbar:
-                    unfinished = nJobs
-                    while unfinished:
-                        time.sleep(1)  # dont clog the ssh uplink
-                        new = f"squeue -j {job_id} -h -t pending,running -r | wc -l"
-                        new = int(remote.cmd(new).stdout)
-                        inc = unfinished - new
-                        pbar.update(inc)
-                        unfinished = new
-
-                # Provide error summary
-                failed = (
-                    f"sacct -j {job_id} --format=JobID,State,ExitCode,NodeList | grep -E FAILED"
-                )
-                failed = remote.cmd(failed, check=False).stdout.splitlines()
-                if failed:
-                    regex = r"_(\d+).*(node-\d+) *$"
-                    nodes = {int((m := re.search(regex, ln)).group(1)): m.group(2) for ln in failed}
-                    for task in nodes:
-                        print(f" Error for job {job_id}_{task} on {nodes[task]} ".center(70, "="))
-                        print(remote.cmd(f"cat {remote_dir}/error/{task}").stdout)
-                    raise RuntimeError(f"Task(s) {list(nodes)} had errors, see printout above.")
+                # Run on NORCE HPC cluster with SLURM queueing system
+                cmd = launch_script(py, cwd=cwd, string=True)
+                submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps)
 
             else:
                 # Run (`launch_xps.py` uses `mp` ⇒ no point parallelising this loop)

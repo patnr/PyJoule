@@ -22,4 +22,4 @@ DATASETS=({remote_dir}/xps/*)
 # Double braces {{}} escape this (become single braces after interpolation).
 INPUT=${{DATASETS[$SLURM_ARRAY_TASK_ID]}}
 
-{launch_script} "$INPUT" 
+{cmd} "$INPUT" 
