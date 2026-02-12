@@ -1,8 +1,7 @@
 import numpy as np
 import numpy.random as rnd
 
-# from xp import dispatch, dict_prod, load_data
-from xp import dict_prod
+from xp import dict_prod, dispatch, load_data
 
 
 def experiment(seed=None, method=None, N=None):
@@ -42,7 +41,7 @@ def list_experiments():
     # Convenience function to re-do each experiment for a list of common parameters.
     common = dict_prod(
         N=[10, 100, 1000],
-        seed=3000 + np.arange(2),
+        seed=3000 + np.arange(100000),
     )
     # Combine: each `xps` item gets all combinations in `common`
     xps = [{**c, **d} for d in xps for c in common]  # latter `for` is "inner/faster"
@@ -52,15 +51,15 @@ def list_experiments():
 
 if __name__ == "__main__":
     xps = list_experiments()
-    res = [experiment(**kwargs) for kwargs in xps]
+    # res = [experiment(**kwargs) for kwargs in xps]
 
     # host = None
-    # # host = "localhost"
-    # # host = "my-gcp-*"
-    # # host = "cno-0001"
-    # # host = "login-1.hpc.intra.norceresearch.no"
-    # data_dir = dispatch(experiment, xps, host)
-    # res = load_data(data_dir / "res")
+    # host = "localhost"
+    # host = "my-gcp-*"
+    # host = "cno-0001"
+    host = "login-1.hpc.intra.norceresearch.no"
+    dir = dispatch(experiment, xps, host)
+    res = load_data(dir / "res")
 
     # Print table of results
     import pandas as pd
