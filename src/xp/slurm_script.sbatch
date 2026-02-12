@@ -18,7 +18,7 @@
 set -eu -o pipefail
 
 # The contents of this file within braces get interpolated by python f-strings.
-DATASETS=({data_dir_remote}/xps/*)
+DATASETS=({remote_dir}/xps/*)
 # Double braces {{}} escape this (become single braces after interpolation).
 INPUT=${{DATASETS[$SLURM_ARRAY_TASK_ID]}}
 

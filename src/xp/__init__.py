@@ -234,8 +234,8 @@ def dispatch(
                 data_root_on_remote = "${HOME}/data"
         data_root_on_remote = remote.cmd("echo " + data_root_on_remote).stdout.splitlines()[0]
 
-        data_dir_remote = Path(data_root_on_remote) / data_dir.relative_to(data_root)
-        paths_xps = [data_dir_remote / xp.relative_to(data_dir) for xp in paths_xps]
+        remote_dir = Path(data_root_on_remote) / data_dir.relative_to(data_root)
+        paths_xps = [remote_dir / xp.relative_to(data_dir) for xp in paths_xps]
 
         # Make (try!) cwd such that the relative path of the script is same as locally
         try:
@@ -244,15 +244,15 @@ def dispatch(
             print("Warning: The cwd is outside of project path ⇒ should not be relied on.")
             cwd = Path(".")
         finally:
-            cwd = data_dir_remote / proj_dir.stem / cwd
-        script = data_dir_remote / proj_dir.stem / script.relative_to(proj_dir)
+            cwd = remote_dir / proj_dir.stem / cwd
+        script = remote_dir / proj_dir.stem / script.relative_to(proj_dir)
 
-        with remote.sym_sync(data_dir_remote, data_dir, proj_dir):
+        with remote.sym_sync(remote_dir, data_dir, proj_dir):
             # Install (potentially outdated) deps (from lockfile)
             # PS: Pre-install `uv` using `wget -qO- https://astral.sh/uv/install.sh | sh`
             venv = f"~/.cache/venvs/{proj_dir.stem}"
             remote.cmd(
-                f"cd {data_dir_remote / proj_dir.stem}; UV_PROJECT_ENVIRONMENT={venv} uv sync",
+                f"cd {remote_dir / proj_dir.stem}; UV_PROJECT_ENVIRONMENT={venv} uv sync",
                 capture_output=False,  # simply print
             )
             py = f"{venv}/bin/python"
@@ -266,11 +266,11 @@ def dispatch(
                     txt = eval(f"f'''{txt}'''", {}, locals())  # interpolate f-strings inside {txt}
                     sbatch.write(txt)
                     sbatch.close()
-                    remote.rsync(sbatch.name, data_dir_remote / "job_script.sbatch")
+                    remote.rsync(sbatch.name, remote_dir / "job_script.sbatch")
 
                 # Submit
                 # TODO: `command` here necessary?
-                job_id = remote.cmd(f"command cd {data_dir_remote}; sbatch job_script.sbatch")
+                job_id = remote.cmd(f"command cd {remote_dir}; sbatch job_script.sbatch")
                 print(job_id.stdout, end="")
                 job_id = int(re.search(r"job (\d*)", job_id.stdout).group(1))
 
@@ -296,7 +296,7 @@ def dispatch(
                     nodes = {int((m := re.search(regex, ln)).group(1)): m.group(2) for ln in failed}
                     for task in nodes:
                         print(f" Error for job {job_id}_{task} on {nodes[task]} ".center(70, "="))
-                        print(remote.cmd(f"cat {data_dir_remote}/error/{task}").stdout)
+                        print(remote.cmd(f"cat {remote_dir}/error/{task}").stdout)
                     raise RuntimeError(f"Task(s) {list(nodes)} had errors, see printout above.")
 
             else:
