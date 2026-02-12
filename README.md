@@ -25,6 +25,8 @@ and sparse `xarray` for post-processing.
 
 ## Alternatives
 
+[A tabular comparison of similar tools for ML](https://dagshub.com/blog/how-to-compare-ml-experiment-tracking-tools-to-fit-your-data-science-workflow/)
+
 - **PyJoule**:
   Python-native, manages parameters and results, minimal code overhead, supports remote/HPC execution (via rsync/ssh), no dashboard, low-medium setup.
 - **Weights & Biases / MLflow / Neptune.ai**:

@@ -215,15 +215,12 @@ def dispatch(
                 raise
 
     # Run remotely
-    # NOTE:
-    # - See xp/setup-compute-node.sh for instructions on setting up a GCP VM.
-    # - Use "localhost" for testing/debugging w/o actual server.
     else:
         remote = uplink.Uplink(host)
 
         # Eval data_root_on_remote
-        # PS: not strictly necessary, since cmd/rsync evaluates it on its own,
-        # but seems more robust and future-proof (for complex commands)
+        # PS: not strictly necessary since ${some_envar} should work when later invoked
+        # by cmd/rsync, but seems more robust and future-proof (for complex commands)
         if data_root_on_remote is None:
             if "hpc.intra.norceresearch" in host:
                 data_root_on_remote = "${USERWORK}"
