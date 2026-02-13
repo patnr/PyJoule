@@ -234,7 +234,7 @@ def dispatch(
 
     # Save xps -- partitioned (for node distribution)
     if nBatch is None:
-        nBatch = 40 if host.startswith("login-") else 1
+        nBatch = 40 if ("hpc.intra.norceresearch" in host) else 1
     save(xps, data_dir, nBatch)
 
     # List resulting paths
