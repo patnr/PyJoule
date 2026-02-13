@@ -102,6 +102,7 @@ def find_proj_dir(script: Path):
 def save(xps, data_dir, nBatch):
     print(f"Saving {len(xps)} xp's to", data_dir)
     batch_size = 1 + len(xps) // nBatch
+    nBatch = (len(xps) + batch_size - 1) // batch_size  # ceil division
 
     def save_batch(i):
         xp_batch = xps[i * batch_size : (i + 1) * batch_size]
