@@ -1,7 +1,13 @@
-"""Load `xps` dicts. Run through `fun_name` (from `script`) using `nCPU`. Save results."""
-# NOTE: This file *imports* `script` and invokes the `fun` defined therein.
+"""Wrapper for executing experiments.
+
+- *Load* `xps` dicts (serialized by `dill`).
+- Run each one through `fun_name` (from `script`) using `nCPU` in *parallel*.
+- *Save* results.
+"""
+
+# This file *imports* `script` and invokes the `fun_name` defined therein.
 # But want to support "standalone" scripts, i.e. run as `python path/to/{script}`.
-# ⇒ This file must get copied into `to/` or insert `to/` in `sys.path`.
+# ⇒ This file must get copied into `to/`, or insert `to/` in `sys.path`.
 # For remote work, we need to do the copy anyways, let's choose the copy solution.
 
 import sys

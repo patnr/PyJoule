@@ -17,15 +17,13 @@ data_dir = dispatch(experiment, params, host)
 This also helps in the configuration and generation of experimental settings,
 and the analysis (processing and presentation, including tabulation/plotting) of the results.
 
-It leverages well-know, battle-tested libraries:
+It leverages well-know python libraries:
 `pathos` for multiprocessing and result storage,
 `rsync (ssh)` for remote execution,
 `pandas` for tabulation,
 and sparse `xarray` for post-processing.
 
 ## Alternatives
-
-[A tabular comparison of similar tools for ML](https://dagshub.com/blog/how-to-compare-ml-experiment-tracking-tools-to-fit-your-data-science-workflow/)
 
 - **PyJoule**:
   Python-native, manages parameters and results, minimal code overhead, supports remote/HPC execution (via rsync/ssh), no dashboard, low-medium setup.
@@ -41,6 +39,8 @@ and sparse `xarray` for post-processing.
   Simple param mapping, no dashboard, Python-native, local parallel only, low setup.
 - **GNU Parallel / xargs + tmux/screen**:
   Manual param management, no dashboard, not Python-native, remote via manual SSH, low setup, shell skills needed.
+
+[Tabular comparison within the ML domain.](https://dagshub.com/blog/how-to-compare-ml-experiment-tracking-tools-to-fit-your-data-science-workflow/)
 
 ## Motivation
 

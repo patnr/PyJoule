@@ -170,26 +170,72 @@ def submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps):
 def dispatch(
     fun: callable,
     xps: list,
-    host: str = None,  # Server alias
-    script: Path = None,  # Path to script containing `fun`
-    nCPU: int = None,  # number of CPUs to engage
-    nBatch: int = None,  # number of batches (splits) of xps
-    # NB: `multiprocessing` module already does "chunking",
-    # so this is intended to be used on clusters with queue systems.
-    # For efficiency, the resulting batch_size should be >= nCPU (per node) * 100
-    proj_dir: Path = None,  # e.g. Path(__file__).parents[0]
+    host: str = None,
+    script: Path = None,
+    nCPU: int = None,
+    nBatch: int = None,
+    proj_dir: Path = None,
     data_root: Path = Path.home() / "data",
-    data_root_on_remote: Path = None,  # e.g. "${HOME}/data" or "${USERWORK}"
+    data_root_on_remote: Path = None,
 ):
     """
-    Do `[fun(**kwargs) for kwargs in xps]`, but on various remote hosts/servers.
+    Execute function over parameter sets on remote hosts/clusters (or locally).
 
-    The `proj_dir` must be a parent to `script`,
-    and gets copied into (and so uploaded with) `data_dir` (which also mirrors path of `proj_dir`!).
-    To promote independence of the uploaded code "environment" vs. whatever
-    "happens to be" the `cwd` (less headaches!), the `proj_dir` should NOT be the `cwd`.
-    Still, if possible (if subpath to `proj_dir`), the `cwd` is "preserved" on remote,
-    such that resources specified relative to it (sloppy!) may be found.
+    Does `[fun(**kwargs) for kwargs in xps]`.
+
+    Parameters
+    ----------
+    fun : callable
+        Function to apply to each experiment. Must accept **kwargs.
+    xps : list
+        List of parameter dictionaries to pass to `fun`.
+    host : str, optional
+        Remote server, e.g. "cno-006".
+        Can also be an `ssh/.config` alias, and supports wildcards, e.g., "my-gcp*".
+        See `xp/setup-compute-node.sh` for instructions on setting up a GCP VM.
+        Default is None (uses "SUBPROCESS", i.e. local execution).
+        Another value commonly used for testing is "localhost".
+    script : Path, optional
+        Path to script containing `fun`. Auto-detected from `fun.__code__.co_filename` if None.
+        Used to import "by name" and thus avoid pickling `fun`, which often contains deep references,
+        and would consume excessive storage/bandwidth (especially if saved with each experiment).
+    nCPU : int, optional
+        Number of CPUs used by local multiprocessing.
+        None ⇒ auto-detect. For SLURM jobs, typically set to 1.
+    nBatch : int, optional
+        Number of batches to split `xps` into, useful for SLURM clusters,
+        with suggested value `len(xps) / (cpus_on_node * jobs_per_cpu)`
+        Defaults: 40 for NORCE HPC, 1 for local/other.
+    proj_dir : Path, optional
+        Project root directory. Gets copied into (and so uploaded with) `data_dir`.
+        Must be parent of `script`. Auto-detected via git if None.
+        PS: using "." may seem reasonable, but is bad practice
+        (promotes dependence on whatever happens to be cwd)
+        Still, if the `cwd` is a subpath of `proj_dir`, it is preserved on remote for resource access.
+    data_root : Path, optional
+        Local root for experiment data. Default: ~/data
+    data_root_on_remote : Path, optional
+        Remote root for data. Auto-set: "${USERWORK}" (NORCE HPC) or "${HOME}/data" (other).
+
+    Returns
+    -------
+    Path
+        Path to local data directory containing experiment inputs and results.
+
+    Notes
+    -----
+    On use of execution wrapper `launch_xps.py`:
+
+    When working remotely, why not just `xargs -P`?
+    Script takes care of infrastructure wrapping:
+    - Load serialized experiment parameters from disk
+    - Import the user's function from the script (supporting sibling imports)
+    - Execute with local multiprocessing (`mp`)
+    - Save serialized results back to disk.
+
+    While subprocessing when working locally can be avoided, it
+    ensures uniform execution across all hosts (local subprocess, SSH, SLURM).
+    Both local and remote execution use the same code path for consistency.
     """
     # Validate inputs before expensive operations
     if not callable(fun):
@@ -197,9 +243,7 @@ def dispatch(
     if not xps:
         raise ValueError("xps list cannot be empty")
 
-    # Don't want to pickle `fun`, because it often contains very deep references,
-    # and take up a lot of storage (especially if saved with each xp).
-    # ⇒ Ensure we know the script from which we can import it.
+    # script
     if script is None:
         # Use `co_filename` because `fun.__module__` is sometimes "__main__" and sometimes relative
         script = fun.__code__.co_filename
@@ -300,6 +344,7 @@ def dispatch(
 
             if "hpc.intra.norceresearch" in host:
                 # Run on NORCE HPC cluster with SLURM queueing system
+                nCPU = 1
                 cmd = launch_script(py, cwd=cwd, string=True)
                 submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps)
 

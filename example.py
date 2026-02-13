@@ -53,11 +53,11 @@ if __name__ == "__main__":
     xps = list_experiments()
     # res = [experiment(**kwargs) for kwargs in xps]
 
-    host = None
+    # host = None
     # host = "localhost"
     # host = "my-gcp-*"
     # host = "cno-0001"
-    # host = "login-1.hpc.intra.norceresearch.no"
+    host = "login-1.hpc.intra.norceresearch.no"
     dir = dispatch(experiment, xps, host)
     res = load_data(dir / "res")
 
