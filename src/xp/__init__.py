@@ -218,7 +218,13 @@ def dispatch(
     else:
         remote = uplink.Uplink(host)
 
-        # Eval data_root_on_remote
+        # data_root_on_remote
+        if data_root_on_remote is None:
+            if "hpc.intra.norceresearch" in host:
+                data_root_on_remote = "${USERWORK}"
+            else:
+                data_root_on_remote = "${HOME}/data"
+        # Evaluate
         # PS: not strictly necessary since ${some_envar} should work when later invoked
         # by cmd/rsync, but seems more robust and future-proof (for complex commands)
         if data_root_on_remote is None:
