@@ -109,7 +109,9 @@ def save(xps, data_dir, nBatch):
         (data_dir / "xps" / str(i)).write_bytes(dill.dumps(xp_batch))
 
     # saving can be slow ⇒ mp
-    mp(save_batch, range(nBatch))
+    # mp(save_batch, range(nBatch))
+    for i in tqdm(list(range(nBatch))):
+        save_batch(i)
 
 
 def submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps):
@@ -206,6 +208,7 @@ def dispatch(
         Number of batches to split `xps` into, useful for SLURM clusters,
         with suggested value `len(xps) / (cpus_on_node * jobs_per_cpu)`
         Defaults: 40 for NORCE HPC, 1 for local/other.
+        Note: this enables nested multiprocessing (SLURM + python).
     proj_dir : Path, optional
         Project root directory. Gets copied into (and so uploaded with) `data_dir`.
         Must be parent of `script`. Auto-detected via git if None.
@@ -344,7 +347,8 @@ def dispatch(
 
             if "hpc.intra.norceresearch" in host:
                 # Run on NORCE HPC cluster with SLURM queueing system
-                nCPU = 1
+                # nCPU = 1 # NB: Dont! May want python to handle some MP (in case each xp is very quick).
+                #                Use instead #SBATCH --cpus-per-task=1 (If you want SLURM to handle all of the distribution)
                 cmd = launch_script(py, cwd=cwd, string=True)
                 submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps)
 

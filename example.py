@@ -41,7 +41,7 @@ def list_experiments():
     # Convenience function to re-do each experiment for a list of common parameters.
     common = dict_prod(
         N=[10, 100, 1000],
-        seed=3000 + np.arange(2),
+        seed=3000 + np.arange(100000),
     )
     # Combine: each `xps` item gets all combinations in `common`
     xps = [{**c, **d} for d in xps for c in common]  # latter `for` is "inner/faster"
@@ -58,7 +58,9 @@ if __name__ == "__main__":
     # host = "my-gcp-*"
     # host = "cno-0001"
     host = "login-1.hpc.intra.norceresearch.no"
-    dir = dispatch(experiment, xps, host)
+    dir = dispatch(experiment, xps, host,
+                   # nBatch=12
+                   )
     res = load_data(dir / "res")
 
     # Print table of results

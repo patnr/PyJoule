@@ -12,8 +12,9 @@
 #SBATCH --partition=comp              # Type of nodes?
 #SBATCH --ntasks=1                    # Only useful with `srun` ?
 #SBATCH --nodes=1                     # Only useful with `srun` ?
-#SBATCH --cpus-per-task=255           # max(batch_size, actual_cpu_count)
+#SBATCH --cpus-per-task=255           # should be min(batch_size, actual_cpu_count) # TODO
 #SBATCH --array=0-{len(paths_xps)-1}  # job/batch indices
+#SBATCH --mem-per-cpu=60M
 # try `--requeue --max-requeue=3` if venv not found (even though nodes share file system)
 
 
