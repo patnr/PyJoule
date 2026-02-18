@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# The contents of this file within braces get interpolated by python f-strings.
+# Double braces {{}} escape this (become single braces after interpolation).
 #
 # Also see https://documentation.sigma2.no/software/userinstallsw/conda.html
 #SBATCH --qos=normal                  # Only one available I think
@@ -14,12 +16,11 @@
 #SBATCH --array=0-{len(paths_xps)-1}  # job/batch indices
 # try `--requeue --max-requeue=3` if venv not found (even though nodes share file system)
 
-# NB: don't include f option, which disables filename expansion (globbing)
-set -eu -o pipefail
 
-# The contents of this file within braces get interpolated by python f-strings.
+set -eu -o pipefail # NB: no -f (need filename expansion/globbing)
+module --quiet reset  # Reset the modules to the system default
+
+
 DATASETS=({remote_dir}/xps/*)
-# Double braces {{}} escape this (become single braces after interpolation).
 INPUT=${{DATASETS[$SLURM_ARRAY_TASK_ID]}}
-
 {cmd} "$INPUT" 
