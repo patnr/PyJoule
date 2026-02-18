@@ -337,7 +337,7 @@ def dispatch(
             # PS: Pre-install `uv` using `wget -qO- https://astral.sh/uv/install.sh | sh`
             venv = f"~/.cache/venvs/{proj_dir.stem}"
             remote.cmd(
-                f"cd {remote_dir / proj_dir.stem}; UV_PROJECT_ENVIRONMENT={venv} uv sync",
+                f"command cd {remote_dir / proj_dir.stem}; UV_PROJECT_ENVIRONMENT={venv} uv sync",
                 capture_output=False,  # simply print
             )
             py = f"{venv}/bin/python"
