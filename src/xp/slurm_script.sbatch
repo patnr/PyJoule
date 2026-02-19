@@ -8,15 +8,14 @@
 #SBATCH --job-name={script.stem}      # Job name
 #SBATCH --output=output/%a     # StdOut (separate files per array task)
 #SBATCH --error=error/%a       # StdErr
-#SBATCH --time=00:05:00               # Maximum runtime (HH:MM:SS)
+#SBATCH --time=00:01:15               # Maximum runtime (HH:MM:SS)
 #SBATCH --partition=comp              # Type of nodes?
-#SBATCH --ntasks=1                    # Only useful with `srun` ?
-#SBATCH --nodes=1                     # Only useful with `srun` ?
-#SBATCH --cpus-per-task=255           # should be min(batch_size, actual_cpu_count) # TODO
+#SBATCH --cpus-per-task=50           # should be min(batch_size, actual_cpu_count) # TODO
 #SBATCH --array=0-{len(paths_xps)-1}  # job/batch indices
 #SBATCH --mem-per-cpu=60M
 # try `--requeue --max-requeue=3` if venv not found (even though nodes share file system)
 
+# TODO: sbatch: warning: can't run 1 processes on 12 nodes, setting nnodes to 1
 
 set -eu -o pipefail # NB: no -f (need filename expansion/globbing)
 module --quiet reset  # Reset the modules to the system default

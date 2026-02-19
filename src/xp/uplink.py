@@ -40,7 +40,7 @@ def resolve_host_glob(host: str) -> str:
 class Uplink:
     """Multiplexed connection to `host` via ssh."""
 
-    def __init__(self, host, progbar=False, dry=False, use_M=True):
+    def __init__(self, host, progbar=True, dry=False, use_M=True):
         self.host = host
         self.progbar = progbar
         self.dry = dry

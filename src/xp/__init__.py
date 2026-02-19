@@ -101,7 +101,7 @@ def find_proj_dir(script: Path):
 
 def save(xps, data_dir, nBatch):
     print(f"Saving {len(xps)} xp's to", data_dir)
-    batch_size = 1 + len(xps) // nBatch
+    batch_size = len(xps) // nBatch
     nBatch = (len(xps) + batch_size - 1) // batch_size  # ceil division
 
     def save_batch(i):
@@ -121,6 +121,7 @@ def submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps):
         txt = eval(f"f'''{txt}'''", {}, locals())  # interpolate f-strings inside {txt}
         sbatch.write(txt)
         sbatch.close()
+        Path(Path(__file__).parent / "tmp.sbatch").write_text(txt)  # for debugging
         remote.rsync(sbatch.name, remote_dir / "job_script.sbatch")
 
     # Submit
@@ -134,7 +135,7 @@ def submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps):
         unfinished = nJobs
         while unfinished:
             time.sleep(1)  # dont clog the ssh uplink
-            new = f"squeue -j {job_id} -h -t pending,running -r | wc -l"
+            new = f"squeue -j {job_id} -r -h -t pending,running,completing | wc -l"
             new = int(remote.cmd(new).stdout)
             inc = unfinished - new
             pbar.update(inc)
@@ -280,8 +281,18 @@ def dispatch(
             data_root_on_remote = "${HOME}/data"
 
     # Save xps -- partitioned (for node distribution)
-    if nBatch is None:
-        nBatch = 40 if ("hpc.intra.norceresearch" in host) else 1
+    if "hpc.intra.norceresearch" in host:
+        if nBatch is None:
+            nBatch = 14  # there are 14 nodes in our cluster
+        # nBatch = min(1000, nBatch)  # queue limit
+        if nBatch > 60:
+            print("""WARNING:
+            The [docs](https://documentation.sigma2.no/jobs/job_scripts/array_jobs.html)
+            state that 1000 array jobs is the limit, but in my experience nBatch>60
+            results in cancellation.""")
+    elif nBatch is None:
+        nBatch = 1
+
     save(xps, data_dir, nBatch)
 
     # List resulting paths
