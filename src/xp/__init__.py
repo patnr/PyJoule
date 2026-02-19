@@ -256,34 +256,31 @@ def dispatch(
     # Place launch script in same dir as script
     shutil.copy(Path(__file__).parent / "launch_xps.py", script.parent)
 
-    # proj_dir
+    # Find proj_dir (code to upload)
     if proj_dir is None:
         proj_dir = find_proj_dir(script)
     if len(proj_dir.relative_to(Path.home()).parts) <= 2:
         msg = f"The `proj_dir` ({proj_dir}) should be uploaded, but is too close to home dir."
         raise RuntimeError(msg)
 
-    # data_dir
+    # Save to data_dir
     data_dir = data_root / proj_dir.stem / script.relative_to(proj_dir).stem
     data_dir = mk_data_dir(data_dir)
 
-    # Host alias "globbing"
-    if host is None:
-        host = "SUBPROCESS"
-    elif host.endswith("*"):
-        host = uplink.resolve_host_glob(host)
-
-    # data_root_on_remote
-    if data_root_on_remote is None:
-        if "hpc.intra.norceresearch" in host:
-            data_root_on_remote = "${USERWORK}"
-        else:
-            data_root_on_remote = "${HOME}/data"
-
     # Save xps -- partitioned (for node distribution)
     if "hpc.intra.norceresearch" in host:
+        # * Let N be the total available CPUs (e.g. 14 nNodes * 256 CPUs/node).
+        #   Want $nBatch * cpus-per-task (i.e. nCPU) >= N$ so that all available CPUs are used.
+        #   It might seem that you could set cpus-per-task=1 and use nBatch=N, however
+        #   - Must keep nBatch < 60 due to queue system limit.
+        #   - SLURM seems significantly slower in distributing 10s jobs than py multiprocessing.
+        #   - Saving many xps is slow (even though total data is same), even w/ multiprocessing.
+        # * Still, want nBatch > 4x nNodes, to get some load balancing by SLURM,
+        #   (use integer multilple to avoid "stragglers" in case of uniform task durations).
+        # ⇒ I recommend nBatch=4*nNodes, and cpu-per-task = N // nBatch.
         if nBatch is None:
-            nBatch = 14  # there are 14 nodes in our cluster
+            nNodes = 14  # cluster has 14 nodes
+            nBatch = 4 * nNodes
         # nBatch = min(1000, nBatch)  # queue limit
         if nBatch > 60:
             print("""WARNING:
@@ -292,7 +289,6 @@ def dispatch(
             results in cancellation.""")
     elif nBatch is None:
         nBatch = 1
-
     save(xps, data_dir, nBatch)
 
     # List resulting paths
@@ -311,7 +307,7 @@ def dispatch(
         return args
 
     # Run locally
-    if host == "SUBPROCESS":
+    if host in ["SUBPROCESS", None]:
         for xp in paths_xps:
             try:
                 subprocess.run(launch_script(sys.executable) + [xp], check=True, cwd=Path.cwd())
@@ -320,6 +316,10 @@ def dispatch(
 
     # Run remotely -- largely an exercise in path management
     else:
+        # Host alias "globbing" TODO: isn't this in Uplink?
+        if host.endswith("*"):
+            host = uplink.resolve_host_glob(host)
+
         remote = uplink.Uplink(host)
 
         # data_root_on_remote
@@ -358,8 +358,6 @@ def dispatch(
 
             if "hpc.intra.norceresearch" in host:
                 # Run on NORCE HPC cluster with SLURM queueing system
-                # nCPU = 1 # NB: Dont! May want python to handle some MP (in case each xp is very quick).
-                #                Use instead #SBATCH --cpus-per-task=1 (If you want SLURM to handle all of the distribution)
                 cmd = launch_script(py, cwd=cwd, string=True)
                 submit_and_monitor_slurm(remote, cmd, remote_dir, script, paths_xps)
 

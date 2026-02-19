@@ -10,7 +10,7 @@
 #SBATCH --error=error/%a       # StdErr
 #SBATCH --time=00:01:15               # Maximum runtime (HH:MM:SS)
 #SBATCH --partition=comp              # Type of nodes?
-#SBATCH --cpus-per-task=50           # should be min(batch_size, actual_cpu_count) # TODO
+#SBATCH --cpus-per-task=58           # should be min(batch_size, actual_cpu_count) # TODO
 #SBATCH --array=0-{len(paths_xps)-1}  # job/batch indices
 #SBATCH --mem-per-cpu=60M
 # try `--requeue --max-requeue=3` if venv not found (even though nodes share file system)

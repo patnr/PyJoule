@@ -51,16 +51,9 @@ if __name__ == "__main__":
         experiment,
         xps,
         host,
-        nBatch=60,
+        nBatch=55,
     )
     res = load_data(dir / "res")
-
-    # * Want nBatch > 5x nNodes (to enable efficient load balancing by SLURM)
-    # * Want nBatch * nCPU (or --cpus-per-task) == nCPUs_available_in_total
-    #   In principle should not be a problem to use 5x nCPUs_available_in_total,
-    #   but there appears to be significant SLURM overhead such that it is best if no jobs are pending,
-    #   i.e. if LHS == RHS - epsilon
-    # * Must keep nBatch < 60 due to queue system limit
 
     df = pd.concat([pd.DataFrame(xps), pd.DataFrame.from_records(res)], axis=1)
     print(df)

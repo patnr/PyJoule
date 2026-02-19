@@ -157,10 +157,12 @@ class Uplink:
     def sym_sync(self, target_dir: Path | str, source_dir: Path, *other):
         """Upload `source_dir` and all `other` to `target_dir` on host. Download upon exit/exception."""
         # Sync source -> target
+        print(f"Sending {source_dir}")
         self.cmd(f"mkdir -p {target_dir}")
         self.rsync(f"{source_dir}/", target_dir)
         # Sync other.name -> target/
         for p in other:
+            print(f"Sending {p}")
             p = Path(p).expanduser().resolve()
             if p == Path.home():
                 raise ValueError("You probably do not want to sync your entire home dir.")
